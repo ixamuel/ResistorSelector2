@@ -100,10 +100,13 @@ def generate_html(json_path, output_html):
             position: relative;
         }
 
+        .sidebar.collapsed {
+            display: none;
+        }
+
         .sidebar-scroll {
             flex: 1;
             overflow-y: auto;
-            padding-bottom: 80px;
         }
 
         .filter-section {
@@ -145,14 +148,11 @@ def generate_html(json_path, output_html):
 
         /* Fixed Sidebar Footer */
         .sidebar-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
             padding: 16px;
             background: var(--bg-card);
             border-top: 1px solid var(--border);
             box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+            margin-top: auto; /* Push to bottom of flex container */
         }
 
         .btn-clear {
@@ -201,6 +201,27 @@ def generate_html(json_path, output_html):
             gap: 12px;
             align-items: center;
         }
+
+        /* Sidebar Toggle Button */
+        .sidebar-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            margin-right: 16px;
+        }
+        .sidebar-toggle:hover {
+            background: var(--bg-muted);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        .sidebar-toggle svg { width: 20px; height: 20px; }
 
         .input-pill {
             padding: 8px 16px;
@@ -539,6 +560,88 @@ def generate_html(json_path, output_html):
             font-weight: 900;
         }
 
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            body { position: relative; }
+            
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 280px;
+                height: 100%;
+                box-shadow: 5px 0 25px rgba(0,0,0,0.2);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.collapsed {
+                display: flex; /* Keep layout but hide with transform */
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                width: 100%;
+            }
+
+            .top-bar {
+                padding: 0 12px;
+                height: 60px;
+                gap: 8px;
+            }
+
+            .top-bar-title h1 { font-size: 0.9rem; }
+            .top-bar-title #counter { font-size: 0.65rem; }
+
+            .search-area .input-pill {
+                width: 140px;
+                padding: 6px 12px;
+                font-size: 0.75rem;
+            }
+
+            .results-area {
+                padding: 8px;
+            }
+
+            .results-table th, .results-table td {
+                padding: 8px 10px;
+                font-size: 0.75rem;
+            }
+
+            .sidebar-toggle {
+                margin-right: 8px;
+                padding: 6px;
+            }
+
+            /* Overlay for mobile when sidebar is open */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5);
+                backdrop-filter: blur(2px);
+                z-index: 95;
+            }
+            .sidebar:not(.collapsed) ~ .sidebar-overlay {
+                display: block;
+            }
+
+            .pill-container {
+                bottom: 12px;
+                width: 95%;
+            }
+            .action-pill {
+                flex-wrap: wrap;
+                justify-content: center;
+                border-radius: 20px;
+                padding: 12px;
+            }
+            .pill-btn {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+        }
+        
         /* Scrollbars */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -553,6 +656,7 @@ def generate_html(json_path, output_html):
     <div style="font-weight: 700; color: var(--primary)">Optimizing Selector Engine...</div>
 </div>
 
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 <aside class="sidebar">
     <div class="sidebar-scroll">
         <div class="filter-section">
@@ -645,10 +749,19 @@ def generate_html(json_path, output_html):
 
 <main class="main-content">
     <header class="top-bar">
-        <div class="top-bar-title">
-            <h1>ResistorSelector</h1>
-            <div id="counter" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Loading database...</div>
-            <div id="selection-note" style="font-size: 0.7rem; color: var(--primary); font-weight: 700; margin-top: 2px; display: none;"></div>
+        <div style="display: flex; align-items: center;">
+            <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+            <div class="top-bar-title">
+                <h1>ResistorSelector</h1>
+                <div id="counter" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Loading database...</div>
+                <div id="selection-note" style="font-size: 0.7rem; color: var(--primary); font-weight: 700; margin-top: 2px; display: none;"></div>
+            </div>
         </div>
         <div class="search-area">
             <input type="text" id="pnSearch" class="input-pill" placeholder="🔍 Search Part Number (ERJ...)">
@@ -713,7 +826,8 @@ def generate_html(json_path, output_html):
         search: "",
         isDecimal: true,
         sort: { key: null, dir: null },
-        selectedPns: []
+        selectedPns: [],
+        activeValues: null // To track exactly what's being shown (exact match or closest neighbors)
     };
 
     let filtered = [];
@@ -742,9 +856,16 @@ def generate_html(json_path, output_html):
         document.getElementById('decimalToggle').onclick = toggleDecimal;
         document.getElementById('resetBtn').onclick = resetFilters;
 
-        document.querySelectorAll('thead th').forEach(th => {
+        document.querySelectorAll('thead th[data-sort]').forEach(th => {
             th.onclick = () => onSort(th.dataset.sort);
         });
+
+        document.getElementById('sidebarToggle').onclick = toggleSidebar;
+
+        // Auto-collapse sidebar on very small screens initially
+        if (window.innerWidth < 768) {
+            document.querySelector('.sidebar').classList.add('collapsed');
+        }
 
         document.querySelectorAll('.section-header').forEach(h => {
             h.onclick = () => h.parentElement.classList.toggle('section-collapsed');
@@ -972,6 +1093,7 @@ def generate_html(json_path, output_html):
 
         if (isSingle && singleVal !== null) {
             filtered = baseFiltered.filter(r => r.rv === singleVal);
+            state.activeValues = filtered.length > 0 ? [singleVal] : null;
             
             if (filtered.length === 0) {
                 const uniqueRVs = Array.from(new Set(baseFiltered.map(r => r.rv))).sort((a, b) => a - b);
@@ -983,12 +1105,14 @@ def generate_html(json_path, output_html):
                     else neighbors = [uniqueRVs[idx - 1], uniqueRVs[idx]];
                     
                     filtered = baseFiltered.filter(r => neighbors.includes(r.rv));
+                    state.activeValues = neighbors;
                     noteEl.textContent = `No exact match for ${formatRes(singleVal)}. Showing closest values: ${neighbors.map(formatRes).join(' and ')}`;
                     noteEl.style.display = 'block';
                 }
             }
         } else {
             filtered = baseFiltered.filter(r => r.rv >= state.resMin && r.rv <= state.resMax);
+            state.activeValues = null; // Default range behavior
         }
 
         displayedCount = INCREMENT;
@@ -1006,9 +1130,12 @@ def generate_html(json_path, output_html):
         const seriesCounts = {};
 
         resistors.forEach(r => {
-            const resM = state.targetRes !== null 
-                    ? (r.rv === state.targetRes) // Match the logic in refresh()
-                    : (r.rv >= state.resMin && r.rv <= state.resMax);
+            let resM = false;
+            if (state.activeValues !== null) {
+                resM = state.activeValues.includes(r.rv);
+            } else {
+                resM = (r.rv >= state.resMin && r.rv <= state.resMax);
+            }
             const prM = !state.products.size || state.products.has(r.p);
             const stM = !state.status.size || state.status.has(r.s);
             const tlM = !state.tolerance.size || state.tolerance.has(r.rt);
@@ -1320,6 +1447,10 @@ def generate_html(json_path, output_html):
         updateTrack(0, 100);
         refresh();
     }
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('collapsed');
+    }
+
     window.onload = init;
 </script>
 </body>

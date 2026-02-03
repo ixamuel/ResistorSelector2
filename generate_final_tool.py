@@ -685,7 +685,7 @@ def generate_html(json_path, output_html):
                             </div>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: #94a3b8; font-weight: 700;">
-                            <span>100μΩ</span>
+                            <span>1mΩ</span>
                             <span>1Ω</span>
                             <span>1kΩ</span>
                             <span>10MΩ</span>
@@ -759,7 +759,7 @@ def generate_html(json_path, output_html):
                 </svg>
             </button>
             <div class="top-bar-title">
-                <h1>ResistorSelector</h1>
+                <h1>ResistorSelector v.2.1 by Sam</h1>
                 <div id="counter" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Loading database...</div>
                 <div id="selection-note" style="font-size: 0.7rem; color: var(--primary); font-weight: 700; margin-top: 2px; display: none;"></div>
             </div>

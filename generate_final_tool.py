@@ -573,6 +573,7 @@ def generate_html(json_path, output_html):
                 height: 100%;
                 box-shadow: 5px 0 25px rgba(0,0,0,0.2);
                 transition: transform 0.3s ease;
+                z-index: 1100; /* Above pills on mobile */
             }
 
             .sidebar.collapsed {
@@ -622,7 +623,7 @@ def generate_html(json_path, output_html):
                 backdrop-filter: blur(2px);
                 z-index: 95;
             }
-            .sidebar:not(.collapsed) ~ .sidebar-overlay {
+            .sidebar:not(.collapsed) + .sidebar-overlay {
                 display: block;
             }
 
@@ -656,7 +657,6 @@ def generate_html(json_path, output_html):
     <div style="font-weight: 700; color: var(--primary)">Optimizing Selector Engine...</div>
 </div>
 
-<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 <aside class="sidebar">
     <div class="sidebar-scroll">
         <div class="filter-section">
@@ -746,6 +746,7 @@ def generate_html(json_path, output_html):
         <button class="btn-clear" id="resetBtn">Clear All Filters</button>
     </div>
 </aside>
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <main class="main-content">
     <header class="top-bar">
@@ -1433,7 +1434,8 @@ def generate_html(json_path, output_html):
             tolerance: new Set(), power: new Set(), tcr: new Set(), size: new Set(),
             series: "", search: "",
             isDecimal: state.isDecimal, sort: { key: null, dir: null },
-            selectedPns: state.selectedPns
+            selectedPns: state.selectedPns,
+            activeValues: null
         };
         document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
         const activeIdx = lookups.status.indexOf('Active');

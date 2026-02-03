@@ -1467,3 +1467,4 @@ def generate_html(json_path, output_html):
 
 if __name__ == "__main__":
     generate_html('resistors_compact.json', 'resistor_selector_v2.html')
+    generate_html('resistors_compact.json', 'index.html')

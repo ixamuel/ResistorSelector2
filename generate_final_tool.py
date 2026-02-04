@@ -435,6 +435,24 @@ def generate_html(json_path, output_html):
         .delta-yellow { background: #854d0e; }
         .delta-red { background: #991b1b; }
 
+        /* Copy Icon */
+        .pn-container { display: flex; align-items: center; gap: 6px; }
+        .btn-copy-pn {
+            opacity: 0;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .pn-container:hover .btn-copy-pn { opacity: 1; }
+        .btn-copy-pn:hover { color: var(--primary); background: var(--primary-ultra-light); }
+        .btn-copy-pn svg { width: 14px; height: 14px; }
+        .btn-copy-pn.copied { color: var(--btn-export) !important; }
+
         .tag-status { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
         .tag-packaging { font-size: 0.65rem; color: var(--text-muted); font-weight: 500; }
         .status-active { background: var(--active-bg); color: var(--active-text); }
@@ -1220,11 +1238,21 @@ def generate_html(json_path, output_html):
             const deltaTag = getDeltaTag(r.rv, state.targetRes);
             const isSelected = state.selectedPns.includes(r.pn);
             return `
-                <tr class="${status === 'NRFND' ? 'nrfnd' : ''}" onclick="toggleSelect('${r.pn}')">
-                    <td class="checkbox-cell">
+                <tr class="${status === 'NRFND' ? 'nrfnd' : ''}">
+                    <td class="checkbox-cell" onclick="toggleSelect('${r.pn}')">
                         <div class="custom-checkbox ${isSelected ? 'checked' : ''}"></div>
                     </td>
-                    <td><span class="part-number" onclick="event.stopPropagation(); window.open('https://octopart.com/search?q='+encodeURIComponent('${r.pn}'), '_blank')">${r.pn}</span></td>
+                    <td>
+                        <div class="pn-container">
+                            <span class="part-number" onclick="window.open('https://octopart.com/search?q='+encodeURIComponent('${r.pn}'), '_blank')">${r.pn}</span>
+                            <div class="btn-copy-pn" onclick="copyToClipboard('${r.pn}', this)" title="Copy Part Number">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </td>
                     <td>
                         <div class="res-container">
                             <span class="res-value">${formatRes(r.rv)}</span>
@@ -1412,6 +1440,24 @@ def generate_html(json_path, output_html):
             </html>
         `);
         newWin.document.close();
+    }
+
+    function copyToClipboard(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (btn) {
+                btn.classList.add('copied');
+                const original = btn.innerHTML;
+                btn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                `;
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = original;
+                }, 1500);
+            }
+        });
     }
 
     function openOctopart() {

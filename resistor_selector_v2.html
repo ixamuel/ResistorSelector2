@@ -494,20 +494,57 @@
         }
 
         .selection-pill {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--primary);
-            max-width: 80vw;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-width: 900px;
+            max-height: 400px;
+            overflow-y: auto;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            padding: 12px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
             opacity: 0;
             transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: auto;
         }
 
         .selection-pill.active {
             opacity: 1;
             transform: translateY(0);
+        }
+
+        .part-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            border: 1px solid var(--primary);
+        }
+
+        .part-pill .btn-remove {
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: 900;
+            font-size: 14px;
+            transition: 0.2s;
+            line-height: 1;
+            padding: 2px;
+            border-radius: 4px;
+        }
+
+        .part-pill .btn-remove:hover { 
+            background: var(--primary); 
+            color: white; 
         }
 
         .action-pill {
@@ -646,6 +683,22 @@
             .pill-container {
                 bottom: 12px;
                 width: 95%;
+            }
+            .selection-pill {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                max-height: 180px; /* Roughly 5 rows of pills */
+                padding: 8px;
+                width: 100%;
+                border-radius: 12px;
+            }
+            .part-pill {
+                padding: 4px 6px;
+                font-size: 0.7rem;
+                justify-content: center;
+                text-align: center;
+                gap: 4px;
             }
             .action-pill {
                 flex-wrap: wrap;
@@ -880,11 +933,6 @@
         });
 
         document.getElementById('sidebarToggle').onclick = toggleSidebar;
-
-        // Auto-collapse sidebar on very small screens initially
-        if (window.innerWidth < 768) {
-            document.querySelector('.sidebar').classList.add('collapsed');
-        }
 
         document.querySelectorAll('.section-header').forEach(h => {
             h.onclick = () => h.parentElement.classList.toggle('section-collapsed');
@@ -1289,7 +1337,12 @@
         const actions = document.getElementById('action-pill');
         
         if (state.selectedPns.length > 0) {
-            pill.textContent = state.selectedPns.join(', ');
+            pill.innerHTML = state.selectedPns.map(pn => `
+                <div class="part-pill">
+                    <span>${pn}</span>
+                    <div class="btn-remove" onclick="toggleSelect('${pn}')">✕</div>
+                </div>
+            `).join('');
             pill.classList.add('active');
             actions.classList.add('active');
         } else {

@@ -58,6 +58,8 @@ def generate_html(json_path, output_html):
             --btn-export: #10b981;
             --btn-octopart: #0ea5e9;
             --btn-mouser: #10108a;
+            --btn-farnell: #A3AF07;
+            --btn-datasheet: #0041C0;
 
             /* Product Category Colors */
             --prod-as: #8b5cf6; /* Anti-Sulfurated - Purple */
@@ -550,6 +552,10 @@ def generate_html(json_path, output_html):
         .btn-octopart:hover { background: #0284c7; }
         .btn-mouser { background: #1e3a8a; }
         .btn-mouser:hover { background: #1e3a8a; filter: brightness(1.2); }
+        .btn-farnell { background: var(--btn-farnell); }
+        .btn-farnell:hover { background: var(--btn-farnell); filter: brightness(1.2); }
+        .btn-datasheet { background: var(--btn-datasheet); }
+        .btn-datasheet:hover { background: var(--btn-datasheet); filter: brightness(1.2); }
 
         .checkbox-cell { width: 40px; text-align: center !important; }
         .custom-checkbox {
@@ -816,8 +822,10 @@ def generate_html(json_path, output_html):
             <button class="pill-btn btn-clear-sel" onclick="clearSelection()">Clear Selection</button>
             <button class="pill-btn btn-compare" onclick="comparePNs()">Compare PN</button>
             <button class="pill-btn btn-export" onclick="exportTable()">Export Table</button>
+            <button class="pill-btn btn-datasheet" onclick="openDatasheet()">Datasheet</button>
             <button class="pill-btn btn-octopart" onclick="openOctopart()">Octopart</button>
             <button class="pill-btn btn-mouser" onclick="openMouser()">Mouser</button>
+            <button class="pill-btn btn-farnell" onclick="openFarnell()">Farnell</button>
         </div>
     </div>
 </main>
@@ -1471,6 +1479,27 @@ def generate_html(json_path, output_html):
             const url = `https://www.mouser.de/c/?q=${encodeURIComponent(pn)}&m=Panasonic&NewSearch=1`;
             window.open(url, '_blank');
         });
+    }
+
+    function openFarnell() {
+        state.selectedPns.forEach(pn => {
+            const url = `https://de.farnell.com/search?brand=panasonic&st=${encodeURIComponent(pn)}`;
+            window.open(url, '_blank');
+        });
+    }
+
+    function openDatasheet() {
+        const uniqueLinks = new Set();
+        state.selectedPns.forEach(pn => {
+            const r = resistors.find(res => res.pn === pn);
+            if (r && r.de !== undefined) {
+                const link = lookups.datasheet[r.de];
+                if (link && link !== "nan" && link !== "") {
+                    uniqueLinks.add(link);
+                }
+            }
+        });
+        uniqueLinks.forEach(link => window.open(link, '_blank'));
     }
 
     function resetFilters() {

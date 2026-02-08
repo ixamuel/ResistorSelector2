@@ -19,7 +19,8 @@ def create_compact_json(xlsx_path, output_json):
         'Resistance Values\n（Ω）': 'rv',
         'Resistance Tolerance\n（%）': 'rt',
         'Packaging': 'pk',
-        'T.C.R\n（×10⁻⁶/K）': 'tc'
+        'T.C.R\n（×10⁻⁶/K）': 'tc',
+        'Datasheet\n（English）': 'de'
     }
     
     # Rename columns that exist in the dataframe
@@ -55,7 +56,7 @@ def create_compact_json(xlsx_path, output_json):
     df['rv'] = df['rv'].apply(clean_rv)
     
     # Create lookups for strings to reduce JSON size
-    lookup_cols = ['p', 's', 'se', 'sz', 'rt', 'pk', 'tc', 'pr']
+    lookup_cols = ['p', 's', 'se', 'sz', 'rt', 'pk', 'tc', 'pr', 'de']
     lookups = {}
     
     for col in lookup_cols:
@@ -76,7 +77,8 @@ def create_compact_json(xlsx_path, output_json):
     }
     
     # Create directory if doesn't exist
-    os.makedirs(os.path.dirname(output_json), exist_ok=True)
+    if os.path.dirname(output_json):
+        os.makedirs(os.path.dirname(output_json), exist_ok=True)
     
     with open(output_json, 'w', encoding='utf-8') as f:
         json.dump(final_obj, f, separators=(',', ':'))
@@ -94,11 +96,12 @@ def col_name_full(short):
         'rt': 'tolerance',
         'pk': 'packaging',
         'tc': 'tcr',
-        'pr': 'power'
+        'pr': 'power',
+        'de': 'datasheet'
     }
     return m.get(short, short)
 
 if __name__ == "__main__":
-    xlsx = 'c:/Users/samue/Downloads/agrav - resistor/Resistors.xlsx'
-    output = 'c:/Users/samue/Downloads/agrav - resistor/v2/resistors_compact.json'
+    xlsx = 'Resistor DB.xlsx'
+    output = 'resistors_compact.json'
     create_compact_json(xlsx, output)

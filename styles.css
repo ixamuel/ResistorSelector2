@@ -676,19 +676,19 @@
         }
 
         .results-table th::after {
-            content: ' ↕';
+            content: '';
             font-size: 0.8em;
-            opacity: 0.3;
+            margin-left: 4px;
+            display: inline-block;
+            width: 8px;
         }
 
         .results-table th.sort-desc::after {
-            content: ' ↓';
-            opacity: 1;
+            content: '▼';
         }
 
         .results-table th.sort-asc::after {
-            content: ' ↑';
-            opacity: 1;
+            content: '▲';
         }
 
         .results-table td {
@@ -1101,8 +1101,13 @@
 
             .results-table th,
             .results-table td {
-                padding: 8px 10px;
+                padding: 10px 12px;
                 font-size: 0.75rem;
+                white-space: nowrap;
+            }
+
+            .results-table th {
+                vertical-align: middle;
             }
 
             .sidebar-toggle {

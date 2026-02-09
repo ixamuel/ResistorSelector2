@@ -789,7 +789,7 @@
         }
 
         .btn-copy-pn {
-            opacity: 0;
+            opacity: 1;
             cursor: pointer;
             color: var(--text-light);
             transition: all 0.2s;
@@ -800,9 +800,6 @@
             border-radius: 4px;
         }
 
-        .pn-container:hover .btn-copy-pn {
-            opacity: 1;
-        }
 
         .btn-copy-pn:hover {
             color: var(--primary);

@@ -1141,7 +1141,11 @@
             }
 
             .results-area {
-                padding: 8px;
+                padding: 0 8px 8px 8px;
+            }
+
+            .results-table {
+                margin-top: 8px;
             }
 
             .results-table th,

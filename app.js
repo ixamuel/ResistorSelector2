@@ -422,7 +422,7 @@ function render() {
                             </div>
                         </div>
                     </td>
-                    <td>
+                    <td class="res-cell">
                         <div class="res-container">
                             <span class="res-value">${formatRes(r.rv)}</span>
                             ${deltaTag}

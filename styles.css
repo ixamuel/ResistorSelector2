@@ -133,6 +133,10 @@
             display: none;
         }
 
+        .sidebar-overlay {
+            display: none;
+        }
+
         .section-header .arrow {
             transition: transform 0.2s;
             font-size: 10px;
@@ -190,15 +194,26 @@
         }
 
         .top-bar {
-            height: 70px;
+            height: auto;
+            min-height: 70px;
             background: var(--bg-card);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 24px;
+            padding: 12px 24px;
             flex-shrink: 0;
             z-index: 90;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .top-bar-title {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-top: 2px;
+            /* Small nudge to align better with hamburger icon */
         }
 
         .top-bar-title h1 {
@@ -655,7 +670,7 @@
             top: 0;
             background: #fafafa;
             padding: 12px 16px;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 800;
             text-transform: uppercase;
             color: var(--text-muted);
@@ -664,6 +679,22 @@
             user-select: none;
             text-align: left;
             z-index: 10;
+            white-space: nowrap;
+            /* Prevent wrapping for most headers */
+            vertical-align: middle;
+            line-height: normal;
+        }
+
+        .series-cell {
+            min-width: 200px;
+            max-width: 350px;
+            white-space: normal !important;
+            line-height: 1.2 !important;
+        }
+
+        .res-cell {
+            min-width: 130px;
+            white-space: nowrap !important;
         }
 
         .results-table th:hover {
@@ -680,7 +711,8 @@
             font-size: 0.8em;
             margin-left: 4px;
             display: inline-block;
-            width: 8px;
+            width: 10px;
+            text-align: center;
         }
 
         .results-table th.sort-desc::after {
@@ -692,9 +724,9 @@
         }
 
         .results-table td {
-            padding: 12px 16px;
+            padding: 10px 14px;
             border-bottom: 1px solid #f1f5f9;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             vertical-align: middle;
         }
 
@@ -1076,23 +1108,40 @@
             }
 
             .top-bar {
-                padding: 0 12px;
-                height: 60px;
-                gap: 8px;
+                padding: 12px;
+                height: auto;
+                min-height: 60px;
+                gap: 12px;
             }
 
             .top-bar-title h1 {
                 font-size: 0.9rem;
+                line-height: 1.2;
             }
 
             .top-bar-title #counter {
                 font-size: 0.65rem;
+                margin-top: 2px;
+            }
+
+            #selection-note {
+                display: block !important;
+                width: 100%;
+                margin-top: 4px;
+            }
+
+            .search-area {
+                width: 100%;
+                order: 3;
+                margin-top: 8px;
+                /* Push search to its own line if it wraps */
             }
 
             .search-area .input-pill {
-                width: 140px;
-                padding: 6px 12px;
-                font-size: 0.75rem;
+                width: 100%;
+                max-width: none;
+                padding: 8px 16px;
+                font-size: 0.8rem;
             }
 
             .results-area {
@@ -1104,6 +1153,7 @@
                 padding: 10px 12px;
                 font-size: 0.75rem;
                 white-space: nowrap;
+                /* Ensure headers stay on one line on mobile */
             }
 
             .results-table th {
@@ -1111,13 +1161,13 @@
             }
 
             .sidebar-toggle {
-                margin-right: 8px;
-                padding: 6px;
+                margin-right: 12px;
+                padding: 8px;
             }
 
             .series-cell {
-                min-width: 180px;
-                max-width: 220px;
+                min-width: 150px;
+                max-width: 250px;
                 white-space: normal !important;
                 line-height: 1.2 !important;
             }

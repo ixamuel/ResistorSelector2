@@ -173,6 +173,18 @@
 
     <script src="data.js"></script>
     <script src="app.js"></script>
+    <script>
+        // Load the gzip-compressed data, then initialize the app
+        loadResistorData()
+            .then(data => {
+                initApp(data);
+            })
+            .catch(err => {
+                console.error('Failed to load resistor data:', err);
+                document.getElementById('loader').innerHTML =
+                    '<div style="color: #b91c1c; font-weight: 700;">Error loading database. Check console for details.</div>';
+            });
+    </script>
 </body>
 
 </html>

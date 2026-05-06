@@ -1,33 +1,41 @@
-const { lookups, resistors } = DATA;
+// lookups and resistors are set by initApp(DATA) called from data.js loader
+let lookups, resistors;
 
 const MIN_RES = 0.0001;
 const MAX_RES = 100000000;
 const LOG_MIN = Math.log10(MIN_RES);
 const LOG_MAX = Math.log10(MAX_RES);
 
-let state = {
-    resMin: 0,
-    resMax: MAX_RES,
-    targetRes: null, // For coloring
-    products: new Set(),
-    status: new Set([lookups.status.indexOf('Active')]),
-    tolerance: new Set(),
-    power: new Set(),
-    tcr: new Set(),
-    size: new Set(),
-    series: "",
-    search: "",
-    isDecimal: true,
-    sort: { key: null, dir: null },
-    selectedPns: [],
-    activeValues: null // To track exactly what's being shown (exact match or closest neighbors)
-};
+// state is initialized in initApp() once lookups is available
+let state;
 
 let filtered = [];
 let displayedCount = 100;
 const INCREMENT = 100;
 
-function init() {
+function initApp(data) {
+    lookups = data.lookups;
+    resistors = data.resistors;
+
+    // Initialize state now that lookups is available
+    state = {
+        resMin: 0,
+        resMax: MAX_RES,
+        targetRes: null,
+        products: new Set(),
+        status: new Set([lookups.status.indexOf('Active')]),
+        tolerance: new Set(),
+        power: new Set(),
+        tcr: new Set(),
+        size: new Set(),
+        series: "",
+        search: "",
+        isDecimal: true,
+        sort: { key: null, dir: null },
+        selectedPns: [],
+        activeValues: null
+    };
+
     setupTags('products', 'tags-products');
     setupTags('status', 'tags-status');
     setupTags('tolerance', 'tags-tolerance');
@@ -694,4 +702,4 @@ function toggleSidebar() {
     document.querySelector('.sidebar').classList.toggle('collapsed');
 }
 
-window.onload = init;
+// initApp is called from data.js after the gzip data is fetched and decompressed

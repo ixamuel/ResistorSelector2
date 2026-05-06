@@ -3,7 +3,7 @@ extract_from_xlsm.py
 ====================
 Extract resistor data from a Panasonic XLSM (macro-enabled workbook) file,
 save as clean XLSX, and optionally run the existing pipeline to regenerate
-resistors_compact.json and data.js.
+resistors_compact.json, resistors_compact.json.gz (gzip-compressed), and data.js.
 
 Dual Strategy:
   - Strategy A (Preferred): Use openpyxl to read the XLSM directly.
@@ -26,6 +26,7 @@ if sys.platform == 'win32':
 import os
 import sys
 import json
+import gzip
 import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -308,13 +309,79 @@ def save_as_xlsx(data, output_path):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  GZIP COMPRESSION
+# ═══════════════════════════════════════════════════════════════════════════
+
+def create_gzip(json_path, gz_path=None):
+    """Gzip-compress a JSON file for browser delivery."""
+    if gz_path is None:
+        gz_path = json_path + '.gz'
+
+    with open(json_path, 'rb') as f_in:
+        with gzip.open(gz_path, 'wb', compresslevel=9) as f_out:
+            f_out.writelines(f_in)
+
+    orig_size = os.path.getsize(json_path)
+    gz_size = os.path.getsize(gz_path)
+    ratio = (1 - gz_size / orig_size) * 100
+    print(f"  Gzip: {gz_path}")
+    print(f"    {orig_size / 1024:.0f} KB → {gz_size / 1024:.0f} KB ({ratio:.0f}% reduction)")
+    return gz_path
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  DATA.JS LOADER GENERATION
+# ═══════════════════════════════════════════════════════════════════════════
+
+DATA_JS_LOADER = """\
+// data.js — Async loader for gzip-compressed resistor database
+// The actual data is in resistors_compact.json.gz (~1-2 MB vs 9 MB uncompressed)
+// Uses browser-native DecompressionStream API (Chrome 80+, Firefox 110+, Safari 16.4+)
+
+const DATA_GZ_URL = 'resistors_compact.json.gz';
+
+async function loadResistorData() {
+    const resp = await fetch(DATA_GZ_URL);
+    if (!resp.ok) throw new Error(`Failed to fetch ${DATA_GZ_URL}: ${resp.status}`);
+
+    const blob = await resp.blob();
+    const stream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+    const reader = stream.getReader();
+    const chunks = [];
+    let totalLen = 0;
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        totalLen += value.length;
+    }
+
+    // Combine chunks into a single Uint8Array
+    const allBytes = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+        allBytes.set(chunk, offset);
+        offset += chunk.length;
+    }
+
+    // Decode as UTF-8 and parse JSON
+    const text = new TextDecoder('utf-8').decode(allBytes);
+    return JSON.parse(text);
+}
+"""
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  PIPELINE
 # ═══════════════════════════════════════════════════════════════════════════
 
 def run_pipeline(xlsx_path, json_output='resistors_compact.json', data_js='data.js'):
-    """Run the existing pipeline: XLSX → JSON → data.js"""
+    """Run the pipeline: XLSX → JSON → gzip → data.js loader"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Add both root and backup_py to path (compact_resistors_v2 is in backup_py)
     sys.path.insert(0, script_dir)
+    sys.path.insert(0, os.path.join(script_dir, 'backup_py'))
 
     # Step 1: XLSX → JSON (compact_resistors_v2.create_compact_json)
     print("\n── Step 1: Converting XLSX to compact JSON ──")
@@ -327,21 +394,22 @@ def run_pipeline(xlsx_path, json_output='resistors_compact.json', data_js='data.
         traceback.print_exc()
         return False
 
-    # Step 2: JSON → data.js (update_data_app.update_data_js)
-    print("\n── Step 2: Generating data.js ──")
-    try:
-        from update_data_app import update_data_js
-        update_data_js(json_output, data_js)
-    except Exception as e:
-        print(f"  ERROR in update_data_app: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    # Step 2: Gzip the JSON
+    print("\n── Step 2: Compressing JSON with gzip ──")
+    gz_path = json_output + '.gz'
+    create_gzip(json_output, gz_path)
+
+    # Step 3: Generate data.js as async loader
+    print("\n── Step 3: Generating data.js loader ──")
+    with open(data_js, 'w', encoding='utf-8') as f:
+        f.write(DATA_JS_LOADER)
+    print(f"  Generated {data_js} ({os.path.getsize(data_js)} bytes)")
 
     print("\n[DONE] Pipeline complete!")
     print(f"   {xlsx_path}")
     print(f"   → {json_output}")
-    print(f"   → {data_js}")
+    print(f"   → {gz_path}")
+    print(f"   → {data_js} (async loader)")
     return True
 
 
@@ -439,11 +507,12 @@ def main():
         run_pipeline(args.output_xlsx, args.json_output, args.data_js)
     else:
         print(f"\n[DONE] Clean XLSX saved to: {args.output_xlsx}")
-        print("   Run 'python compact_resistors_v2.py' to regenerate JSON/data.js.")
+        print("   Run 'python extract_from_xlsm.py' (without --skip-pipeline) to regenerate JSON/gzip/data.js.")
 
     # Show file sizes
     print()
-    for fpath in [args.xlsm_file, args.output_xlsx, args.json_output, args.data_js]:
+    gz_path = args.json_output + '.gz'
+    for fpath in [args.xlsm_file, args.output_xlsx, args.json_output, gz_path, args.data_js]:
         if os.path.exists(fpath):
             size_kb = os.path.getsize(fpath) / 1024
             print(f"   {fpath}: {size_kb:.1f} KB")

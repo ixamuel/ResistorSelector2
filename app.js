@@ -9,8 +9,6 @@ function debounce(fn, delay) {
     };
 }
 
-const onRangeInputDebounced = debounce(onRangeInput, 200);
-
 const MIN_RES = 0.0001;
 const MAX_RES = 100000000;
 const LOG_MIN = Math.log10(MIN_RES);
@@ -58,8 +56,8 @@ function initApp(data) {
     refresh(); // Refresh will call updateAvailability
 
     // Listeners
-    document.getElementById('resSliderMin').oninput = onRangeInputDebounced;
-    document.getElementById('resSliderMax').oninput = onRangeInputDebounced;
+    document.getElementById('resSliderMin').oninput = () => { onSliderInput(); onSliderInputDebounced(); };
+    document.getElementById('resSliderMax').oninput = () => { onSliderInput(); onSliderInputDebounced(); };
     document.getElementById('resMin').onchange = onManualInput;
     document.getElementById('resMax').onchange = onManualInput;
     document.getElementById('pnSearch').oninput = (e) => { state.search = e.target.value.toLowerCase(); refresh(); };
@@ -205,6 +203,25 @@ function onRangeInput() {
     updateTrack(low, high);
     refresh();
 }
+
+function onSliderInput() {
+    let low = parseInt(document.getElementById('resSliderMin').value);
+    let high = parseInt(document.getElementById('resSliderMax').value);
+    if (low > high) [low, high] = [high, low];
+
+    state.resMin = Math.pow(10, LOG_MIN + (LOG_MAX - LOG_MIN) * (low / 100));
+    state.resMax = Math.pow(10, LOG_MIN + (LOG_MAX - LOG_MIN) * (high / 100));
+    state.targetRes = null;
+
+    document.getElementById('resMin').value = formatRes(state.resMin);
+    document.getElementById('resMax').value = formatRes(state.resMax);
+
+    updateTrack(low, high);
+}
+
+const onSliderInputDebounced = debounce(function() {
+    refresh();
+}, 200);
 
 function onManualInput() {
     const minStr = document.getElementById('resMin').value;

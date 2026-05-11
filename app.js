@@ -448,7 +448,7 @@ function render() {
                     </td>
                     <td>
                         <div class="pn-container">
-                            <span class="part-number" onclick="window.open('https://octopart.com/search?q='+encodeURIComponent('${r.pn}'), '_blank')">${r.pn}</span>
+                            <span class="part-number" onclick="openPNDatasheet('${r.pn}')">${r.pn}</span>
                             <div class="btn-copy-pn" onclick="copyToClipboard('${r.pn}', this)" title="Copy Part Number">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -648,6 +648,23 @@ function exportTable() {
     newWin.document.close();
 }
 
+function copyPNList() {
+    if (state.selectedPns.length === 0) return;
+    const text = state.selectedPns.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyPNBtn');
+        if (btn) {
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.style.background = '#10b981';
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.style.background = '';
+            }, 2000);
+        }
+    });
+}
+
 function copyToClipboard(text, btn) {
     navigator.clipboard.writeText(text).then(() => {
         if (btn) {
@@ -684,6 +701,16 @@ function openFarnell() {
         const url = `https://de.farnell.com/search?brand=panasonic&st=${encodeURIComponent(pn)}`;
         window.open(url, '_blank');
     });
+}
+
+function openPNDatasheet(pn) {
+    const r = resistors.find(res => res.pn === pn);
+    if (r && r.de !== undefined) {
+        const link = lookups.datasheet[r.de];
+        if (link && link !== "nan" && link !== "") {
+            window.open(link, '_blank');
+        }
+    }
 }
 
 function openDatasheet() {

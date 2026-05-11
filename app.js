@@ -548,12 +548,6 @@ function exportTable() {
             </tr>
         `).join('');
 
-    let md = "| Part Number | Resistance | Power | Tol | TCR | Size | Series | Status | Packaging |\\n";
-    md += "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\\n";
-    selectedResistors.forEach(r => {
-        md += `| ${r.pn} | ${formatRes(r.rv)} | ${lookups.power[r.pr]}W | ${lookups.tolerance[r.rt]}% | ${lookups.tcr[r.tc]} | ${lookups.size[r.sz]} | ${lookups.series[r.se]} | ${lookups.status[r.s]} | ${lookups.packaging[r.pk]} |\n`;
-    });
-
     const newWin = window.open("", "_blank");
     newWin.document.write(`
             <html>
@@ -575,19 +569,18 @@ function exportTable() {
                     .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; }
                     .btn-copy { background: #4f46e5; color: white; }
                     .btn-copy:hover { background: #4338ca; }
-                    .btn-md { background: #e2e8f0; color: #475569; }
-                    
-                    pre { background: #f1f5f9; padding: 16px; border-radius: 8px; font-size: 12px; white-space: pre-wrap; display: none; border: 1px solid #e2e8f0; }
+                    .btn-pn { background: #e2e8f0; color: #475569; }
+                    .btn-pn:hover { background: #cbd5e1; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <h2>Exported Components</h2>
-                    <p class="hint">The table below is formatted for easy copy-pasting into <b>Word, Outlook, or Excel</b>. Use the button below to select and copy everything.</p>
+                    <p class="hint">The table below is formatted for easy copy-pasting into <b>Word, Outlook, or Excel</b>. Use the buttons below to copy.</p>
                     
                     <div class="actions">
                         <button class="btn btn-copy" onclick="copyTable()">Copy Table for Word/Outlook</button>
-                        <button class="btn btn-md" onclick="toggleMarkdown()">Show Markdown</button>
+                        <button class="btn btn-pn" onclick="copyPNList()">Copy Part no. list</button>
                     </div>
 
                     <div id="table-wrapper">
@@ -610,11 +603,11 @@ function exportTable() {
                             </tbody>
                         </table>
                     </div>
-
-                    <pre id="md-content">${md}</pre>
                 </div>
 
                 <script>
+                    const pnData = ${JSON.stringify(selectedResistors.map(r => r.pn))};
+
                     function copyTable() {
                         const range = document.createRange();
                         range.selectNode(document.getElementById('res-table'));
@@ -633,16 +626,20 @@ function exportTable() {
                         }, 2000);
                     }
 
-                    function toggleMarkdown() {
-                        const pre = document.getElementById('md-content');
-                        const btn = document.querySelector('.btn-md');
-                        if (pre.style.display === 'block') {
-                            pre.style.display = 'none';
-                            btn.textContent = 'Show Markdown';
-                        } else {
-                            pre.style.display = 'block';
-                            btn.textContent = 'Hide Markdown';
-                        }
+                    function copyPNList() {
+                        const text = pnData.join('\\n');
+                        navigator.clipboard.writeText(text).then(() => {
+                            const btn = document.querySelector('.btn-pn');
+                            const original = btn.textContent;
+                            btn.textContent = 'Copied!';
+                            btn.style.background = '#10b981';
+                            btn.style.color = 'white';
+                            setTimeout(() => {
+                                btn.textContent = original;
+                                btn.style.background = '#e2e8f0';
+                                btn.style.color = '#475569';
+                            }, 2000);
+                        });
                     }
                 <\/script>
             </body>

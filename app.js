@@ -90,6 +90,8 @@ function initApp(data) {
     if (activeIdx !== -1) {
         document.getElementById('tags-status').children[activeIdx].classList.add('active');
     }
+
+    window.addEventListener('resize', fitActionPill);
 }
 
 function createTagBtn(key, idx) {
@@ -488,6 +490,32 @@ function toggleSelect(pn) {
     render();
 }
 
+function fitActionPill() {
+    const actions = document.getElementById('action-pill');
+    if (!actions.classList.contains('active')) return;
+    const btns = actions.querySelectorAll('.pill-btn');
+    if (btns.length === 0) return;
+
+    // Reset to base size first
+    btns.forEach(b => b.style.fontSize = '');
+    actions.style.flexWrap = 'nowrap';
+
+    let fontSize = 0.75; // rem
+    const step = 0.025;
+    while (fontSize > 0.4) {
+        btns.forEach(b => b.style.fontSize = fontSize + 'rem');
+        // Check if any button wraps or overflows
+        let overflows = false;
+        btns.forEach(b => {
+            if (b.scrollWidth > b.clientWidth || b.getBoundingClientRect().bottom > actions.getBoundingClientRect().bottom) {
+                overflows = true;
+            }
+        });
+        if (!overflows) break;
+        fontSize -= step;
+    }
+}
+
 function updateSelectionUI() {
     const pill = document.getElementById('selection-pill');
     const actions = document.getElementById('action-pill');
@@ -501,6 +529,7 @@ function updateSelectionUI() {
             `).join('');
         pill.classList.add('active');
         actions.classList.add('active');
+        requestAnimationFrame(fitActionPill);
     } else {
         pill.classList.remove('active');
         actions.classList.remove('active');

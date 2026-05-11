@@ -1,6 +1,16 @@
 // lookups and resistors are set by initApp(DATA) called from data.js loader
 let lookups, resistors;
 
+function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+const onRangeInputDebounced = debounce(onRangeInput, 200);
+
 const MIN_RES = 0.0001;
 const MAX_RES = 100000000;
 const LOG_MIN = Math.log10(MIN_RES);
@@ -48,8 +58,8 @@ function initApp(data) {
     refresh(); // Refresh will call updateAvailability
 
     // Listeners
-    document.getElementById('resSliderMin').oninput = onRangeInput;
-    document.getElementById('resSliderMax').oninput = onRangeInput;
+    document.getElementById('resSliderMin').oninput = onRangeInputDebounced;
+    document.getElementById('resSliderMax').oninput = onRangeInputDebounced;
     document.getElementById('resMin').onchange = onManualInput;
     document.getElementById('resMax').onchange = onManualInput;
     document.getElementById('pnSearch').oninput = (e) => { state.search = e.target.value.toLowerCase(); refresh(); };

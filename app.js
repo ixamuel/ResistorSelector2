@@ -60,7 +60,7 @@ function initApp(data) {
     document.getElementById('resSliderMax').oninput = () => { onSliderInput(); onSliderInputDebounced(); };
     document.getElementById('resMin').onchange = onManualInput;
     document.getElementById('resMax').onchange = onManualInput;
-    document.getElementById('pnSearch').oninput = (e) => { state.search = e.target.value.trim().toLowerCase(); refresh(); };
+    document.getElementById('pnSearch').oninput = (e) => { state.search = e.target.value.trim().toLowerCase().replace(/-/g, ''); refresh(); };
     document.getElementById('seriesSelect').onchange = (e) => { state.series = e.target.value; refresh(); };
     document.getElementById('decimalToggle').onclick = toggleDecimal;
     document.getElementById('resetBtn').onclick = resetFilters;
@@ -311,7 +311,7 @@ function refresh() {
         if (state.tcr.size && !state.tcr.has(r.tc)) return false;
         if (state.size.size && !state.size.has(r.sz)) return false;
         if (state.series && r.se != state.series) return false;
-        if (state.search && !r.pn.toLowerCase().includes(state.search)) return false;
+        if (state.search && !r.pn.toLowerCase().replace(/-/g, '').includes(state.search)) return false;
         return true;
     });
 
@@ -367,7 +367,7 @@ function updateAvailability() {
         const tcM = !state.tcr.size || state.tcr.has(r.tc);
         const szM = !state.size.size || state.size.has(r.sz);
         const seM = !state.series || r.se == state.series;
-        const shM = !state.search || r.pn.toLowerCase().includes(state.search);
+        const shM = !state.search || r.pn.toLowerCase().replace(/-/g, '').includes(state.search);
 
         const allMatched = resM && prM && stM && tlM && pwM && tcM && szM && seM && shM;
 

@@ -52,7 +52,7 @@ function initApp(data) {
     document.getElementById('resSliderMax').oninput = onRangeInput;
     document.getElementById('resMin').onchange = onManualInput;
     document.getElementById('resMax').onchange = onManualInput;
-    document.getElementById('pnSearch').oninput = (e) => { state.search = e.target.value.toLowerCase(); refresh(); };
+    document.getElementById('pnSearch').oninput = (e) => { state.search = e.target.value.trim().toLowerCase(); refresh(); };
     document.getElementById('seriesSelect').onchange = (e) => { state.series = e.target.value; refresh(); };
     document.getElementById('decimalToggle').onclick = toggleDecimal;
     document.getElementById('resetBtn').onclick = resetFilters;

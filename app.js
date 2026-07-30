@@ -1,6 +1,14 @@
 // lookups and resistors are set by initApp(DATA) called from data.js loader
 let lookups, resistors;
 
+function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
 const MIN_RES = 0.0001;
 const MAX_RES = 100000000;
 const LOG_MIN = Math.log10(MIN_RES);
@@ -48,8 +56,8 @@ function initApp(data) {
     refresh(); // Refresh will call updateAvailability
 
     // Listeners
-    document.getElementById('resSliderMin').oninput = onRangeInput;
-    document.getElementById('resSliderMax').oninput = onRangeInput;
+    document.getElementById('resSliderMin').oninput = () => { onSliderInput(); onSliderInputDebounced(); };
+    document.getElementById('resSliderMax').oninput = () => { onSliderInput(); onSliderInputDebounced(); };
     document.getElementById('resMin').onchange = onManualInput;
     document.getElementById('resMax').onchange = onManualInput;
     document.getElementById('pnSearch').oninput = (e) => { state.search = e.target.value.trim().toLowerCase(); refresh(); };
@@ -82,6 +90,7 @@ function initApp(data) {
     if (activeIdx !== -1) {
         document.getElementById('tags-status').children[activeIdx].classList.add('active');
     }
+
 }
 
 function createTagBtn(key, idx) {
@@ -195,6 +204,25 @@ function onRangeInput() {
     updateTrack(low, high);
     refresh();
 }
+
+function onSliderInput() {
+    let low = parseInt(document.getElementById('resSliderMin').value);
+    let high = parseInt(document.getElementById('resSliderMax').value);
+    if (low > high) [low, high] = [high, low];
+
+    state.resMin = Math.pow(10, LOG_MIN + (LOG_MAX - LOG_MIN) * (low / 100));
+    state.resMax = Math.pow(10, LOG_MIN + (LOG_MAX - LOG_MIN) * (high / 100));
+    state.targetRes = null;
+
+    document.getElementById('resMin').value = formatRes(state.resMin);
+    document.getElementById('resMax').value = formatRes(state.resMax);
+
+    updateTrack(low, high);
+}
+
+const onSliderInputDebounced = debounce(function() {
+    refresh();
+}, 200);
 
 function onManualInput() {
     const minStr = document.getElementById('resMin').value;
@@ -421,7 +449,7 @@ function render() {
                     </td>
                     <td>
                         <div class="pn-container">
-                            <span class="part-number" onclick="window.open('https://octopart.com/search?q='+encodeURIComponent('${r.pn}'), '_blank')">${r.pn}</span>
+                            <span class="part-number" onclick="openPNDatasheet('${r.pn}')">${r.pn}</span>
                             <div class="btn-copy-pn" onclick="copyToClipboard('${r.pn}', this)" title="Copy Part Number">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -521,12 +549,6 @@ function exportTable() {
             </tr>
         `).join('');
 
-    let md = "| Part Number | Resistance | Power | Tol | TCR | Size | Series | Status | Packaging |\\n";
-    md += "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\\n";
-    selectedResistors.forEach(r => {
-        md += `| ${r.pn} | ${formatRes(r.rv)} | ${lookups.power[r.pr]}W | ${lookups.tolerance[r.rt]}% | ${lookups.tcr[r.tc]} | ${lookups.size[r.sz]} | ${lookups.series[r.se]} | ${lookups.status[r.s]} | ${lookups.packaging[r.pk]} |\n`;
-    });
-
     const newWin = window.open("", "_blank");
     newWin.document.write(`
             <html>
@@ -548,19 +570,18 @@ function exportTable() {
                     .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; }
                     .btn-copy { background: #4f46e5; color: white; }
                     .btn-copy:hover { background: #4338ca; }
-                    .btn-md { background: #e2e8f0; color: #475569; }
-                    
-                    pre { background: #f1f5f9; padding: 16px; border-radius: 8px; font-size: 12px; white-space: pre-wrap; display: none; border: 1px solid #e2e8f0; }
+                    .btn-pn { background: #e2e8f0; color: #475569; }
+                    .btn-pn:hover { background: #cbd5e1; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <h2>Exported Components</h2>
-                    <p class="hint">The table below is formatted for easy copy-pasting into <b>Word, Outlook, or Excel</b>. Use the button below to select and copy everything.</p>
+                    <p class="hint">The table below is formatted for easy copy-pasting into <b>Word, Outlook, or Excel</b>. Use the buttons below to copy.</p>
                     
                     <div class="actions">
                         <button class="btn btn-copy" onclick="copyTable()">Copy Table for Word/Outlook</button>
-                        <button class="btn btn-md" onclick="toggleMarkdown()">Show Markdown</button>
+                        <button class="btn btn-pn" onclick="copyPNList()">Copy Part no. list</button>
                     </div>
 
                     <div id="table-wrapper">
@@ -583,11 +604,11 @@ function exportTable() {
                             </tbody>
                         </table>
                     </div>
-
-                    <pre id="md-content">${md}</pre>
                 </div>
 
                 <script>
+                    const pnData = ${JSON.stringify(selectedResistors.map(r => r.pn))};
+
                     function copyTable() {
                         const range = document.createRange();
                         range.selectNode(document.getElementById('res-table'));
@@ -606,22 +627,43 @@ function exportTable() {
                         }, 2000);
                     }
 
-                    function toggleMarkdown() {
-                        const pre = document.getElementById('md-content');
-                        const btn = document.querySelector('.btn-md');
-                        if (pre.style.display === 'block') {
-                            pre.style.display = 'none';
-                            btn.textContent = 'Show Markdown';
-                        } else {
-                            pre.style.display = 'block';
-                            btn.textContent = 'Hide Markdown';
-                        }
+                    function copyPNList() {
+                        const text = pnData.join('\\n');
+                        navigator.clipboard.writeText(text).then(() => {
+                            const btn = document.querySelector('.btn-pn');
+                            const original = btn.textContent;
+                            btn.textContent = 'Copied!';
+                            btn.style.background = '#10b981';
+                            btn.style.color = 'white';
+                            setTimeout(() => {
+                                btn.textContent = original;
+                                btn.style.background = '#e2e8f0';
+                                btn.style.color = '#475569';
+                            }, 2000);
+                        });
                     }
                 <\/script>
             </body>
             </html>
         `);
     newWin.document.close();
+}
+
+function copyPNList() {
+    if (state.selectedPns.length === 0) return;
+    const text = state.selectedPns.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyPNBtn');
+        if (btn) {
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.style.background = '#10b981';
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.style.background = '';
+            }, 2000);
+        }
+    });
 }
 
 function copyToClipboard(text, btn) {
@@ -660,6 +702,16 @@ function openFarnell() {
         const url = `https://de.farnell.com/search?brand=panasonic&st=${encodeURIComponent(pn)}`;
         window.open(url, '_blank');
     });
+}
+
+function openPNDatasheet(pn) {
+    const r = resistors.find(res => res.pn === pn);
+    if (r && r.de !== undefined) {
+        const link = lookups.datasheet[r.de];
+        if (link && link !== "nan" && link !== "") {
+            window.open(link, '_blank');
+        }
+    }
 }
 
 function openDatasheet() {

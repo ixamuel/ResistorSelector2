@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ResistorSelector v2.1</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260917-series-ui2">
 </head>
 
 <body>
@@ -91,8 +91,23 @@
                 <div class="section-content">
                     <div class="filter-item">
                         <label>Select Series</label>
-                        <select id="seriesSelect" class="input-pill"
-                            style="width:100%; border-radius: 8px; font-weight: 700;"></select>
+                        <div id="seriesDropdown" class="series-dropdown">
+                            <button type="button" id="seriesToggle" class="series-toggle" aria-expanded="false">
+                                <span id="seriesSummary">All Series</span>
+                                <span aria-hidden="true">▾</span>
+                            </button>
+                            <div id="seriesMenu" class="series-menu">
+                                <div class="series-search-container">
+                                    <input type="search" id="seriesSearch" placeholder="Search series..." autocomplete="off">
+                                    <button type="button" id="clearSeriesSearch" class="btn-clear-menu">Clear</button>
+                                </div>
+                                <div class="series-menu-actions">
+                                    <button type="button" id="selectVisibleSeries" class="btn-clear-menu">Select visible</button>
+                                    <button type="button" id="clearSelectedSeries" class="btn-clear-menu">Clear selected</button>
+                                </div>
+                                <div id="seriesList" class="series-list"></div>
+                            </div>
+                        </div>
                     </div>
                     <div class="filter-item">
                         <label>Size (Inch/Metric)</label>
@@ -173,7 +188,7 @@
     </main>
 
     <script src="data.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260917-series-ui2"></script>
     <script>
         // Load the gzip-compressed data, then initialize the app
         loadResistorData()

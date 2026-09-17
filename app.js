@@ -36,7 +36,9 @@ function initApp(data) {
         power: new Set(),
         tcr: new Set(),
         size: new Set(),
-        series: "",
+        series: new Set(),
+        seriesQuery: "",
+        seriesCounts: {},
         search: "",
         isDecimal: true,
         sort: { key: null, dir: null },
@@ -51,8 +53,7 @@ function initApp(data) {
     setupTags('tcr', 'tags-tcr');
     setupTags('size', 'tags-size');
 
-    // Series setup
-    const seriesSel = document.getElementById('seriesSelect');
+    setupSeriesDropdown();
     refresh(); // Refresh will call updateAvailability
 
     // Listeners
@@ -61,7 +62,6 @@ function initApp(data) {
     document.getElementById('resMin').onchange = onManualInput;
     document.getElementById('resMax').onchange = onManualInput;
     document.getElementById('pnSearch').oninput = (e) => { state.search = e.target.value.trim().toLowerCase().replace(/-/g, ''); refresh(); };
-    document.getElementById('seriesSelect').onchange = (e) => { state.series = e.target.value; refresh(); };
     document.getElementById('decimalToggle').onclick = toggleDecimal;
     document.getElementById('resetBtn').onclick = resetFilters;
 
@@ -152,6 +152,128 @@ function setupTags(key, containerId) {
             container.appendChild(createTagBtn(key, idx));
         });
     }
+}
+
+function setupSeriesDropdown() {
+    const dropdown = document.getElementById('seriesDropdown');
+    const toggle = document.getElementById('seriesToggle');
+    const menu = document.getElementById('seriesMenu');
+    const search = document.getElementById('seriesSearch');
+
+    toggle.onclick = () => {
+        const isOpen = menu.classList.toggle('show');
+        toggle.setAttribute('aria-expanded', isOpen);
+        if (isOpen) {
+            positionSeriesMenu();
+            search.focus();
+        }
+    };
+
+    search.oninput = event => {
+        state.seriesQuery = event.target.value.trim().toLowerCase();
+        renderSeriesOptions();
+    };
+
+    document.getElementById('clearSeriesSearch').onclick = () => {
+        search.value = '';
+        state.seriesQuery = '';
+        renderSeriesOptions();
+        search.focus();
+    };
+
+    document.getElementById('selectVisibleSeries').onclick = () => {
+        lookups.series.forEach((series, index) => {
+            const matches = !state.seriesQuery || series.toLowerCase().includes(state.seriesQuery);
+            if (matches && state.seriesCounts[index] > 0) state.series.add(index);
+        });
+        refresh();
+    };
+
+    document.getElementById('clearSelectedSeries').onclick = () => {
+        state.series.clear();
+        refresh();
+    };
+
+    search.onkeydown = event => {
+        if (event.key === 'Escape') {
+            menu.classList.remove('show');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.focus();
+        }
+    };
+
+    document.addEventListener('click', event => {
+        if (!dropdown.contains(event.target)) {
+            menu.classList.remove('show');
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    window.addEventListener('resize', positionSeriesMenu);
+    window.addEventListener('scroll', positionSeriesMenu, true);
+}
+
+function positionSeriesMenu() {
+    const menu = document.getElementById('seriesMenu');
+    const toggle = document.getElementById('seriesToggle');
+    if (!menu || !toggle || !menu.classList.contains('show')) return;
+    if (window.innerWidth <= 768) {
+        menu.style.left = '';
+        menu.style.top = '';
+        return;
+    }
+
+    const rect = toggle.getBoundingClientRect();
+    const menuWidth = Math.min(620, window.innerWidth - 32);
+    const left = Math.min(rect.right + 8, window.innerWidth - menuWidth - 16);
+    menu.style.left = `${Math.max(16, left)}px`;
+    menu.style.top = `${Math.max(16, rect.top)}px`;
+}
+
+function renderSeriesOptions(seriesCounts = state.seriesCounts || {}) {
+    const list = document.getElementById('seriesList');
+    const query = state.seriesQuery;
+    const visibleSeries = lookups.series
+        .map((name, index) => ({ name, index }))
+        .filter(series => !query || series.name.toLowerCase().includes(query));
+
+    list.innerHTML = '';
+    if (visibleSeries.length === 0) {
+        list.innerHTML = '<div class="series-empty">No matching series</div>';
+    } else {
+        visibleSeries.forEach(({ name, index }) => {
+            const selected = state.series.has(index);
+            const count = seriesCounts[index] || 0;
+            const option = document.createElement('label');
+            option.className = `series-option${selected ? ' selected' : ''}${count === 0 && !selected ? ' unavailable' : ''}`;
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = selected;
+            checkbox.disabled = count === 0 && !selected;
+            checkbox.onchange = () => {
+                if (checkbox.checked) state.series.add(index);
+                else state.series.delete(index);
+                refresh();
+            };
+
+            const label = document.createElement('span');
+            label.className = 'series-option-label';
+            label.textContent = name || 'N/A';
+
+            const countLabel = document.createElement('span');
+            countLabel.className = 'series-option-count';
+            countLabel.textContent = count.toLocaleString();
+
+            option.append(checkbox, label, countLabel);
+            list.appendChild(option);
+        });
+    }
+
+    const summary = document.getElementById('seriesSummary');
+    summary.textContent = state.series.size === 0
+        ? 'All Series'
+        : `${state.series.size} Series selected`;
 }
 
 function parseVal(s) {
@@ -310,7 +432,7 @@ function refresh() {
         if (state.power.size && !state.power.has(r.pr)) return false;
         if (state.tcr.size && !state.tcr.has(r.tc)) return false;
         if (state.size.size && !state.size.has(r.sz)) return false;
-        if (state.series && r.se != state.series) return false;
+        if (state.series.size && !state.series.has(r.se)) return false;
         if (state.search && !r.pn.toLowerCase().replace(/-/g, '').includes(state.search)) return false;
         return true;
     });
@@ -366,7 +488,7 @@ function updateAvailability() {
         const pwM = !state.power.size || state.power.has(r.pr);
         const tcM = !state.tcr.size || state.tcr.has(r.tc);
         const szM = !state.size.size || state.size.has(r.sz);
-        const seM = !state.series || r.se == state.series;
+        const seM = !state.series.size || state.series.has(r.se);
         const shM = !state.search || r.pn.toLowerCase().replace(/-/g, '').includes(state.search);
 
         const allMatched = resM && prM && stM && tlM && pwM && tcM && szM && seM && shM;
@@ -404,18 +526,8 @@ function updateAvailability() {
         });
     });
 
-    const seriesSel = document.getElementById('seriesSelect');
-    const currentVal = state.series;
-    seriesSel.innerHTML = '<option value="">All Series (' + resistors.length.toLocaleString() + ')</option>';
-    lookups.series.forEach((s, i) => {
-        const count = seriesCounts[i] || 0;
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = `${s} (${count.toLocaleString()})`;
-        if (count === 0) opt.disabled = true;
-        if (i == currentVal) opt.selected = true;
-        seriesSel.appendChild(opt);
-    });
+    state.seriesCounts = seriesCounts;
+    renderSeriesOptions(seriesCounts);
 }
 
 function getShort(g) { return { products: 'p', status: 's', tolerance: 'rt', power: 'pr', tcr: 'tc', size: 'sz' }[g]; }
@@ -788,7 +900,7 @@ function resetFilters() {
         resMin: 0, resMax: MAX_RES, targetRes: null,
         products: new Set(), status: new Set([lookups.status.indexOf('Active')]),
         tolerance: new Set(), power: new Set(), tcr: new Set(), size: new Set(),
-        series: "", search: "",
+        series: new Set(), seriesQuery: "", seriesCounts: {}, search: "",
         isDecimal: state.isDecimal, sort: { key: null, dir: null },
         selectedPns: state.selectedPns,
         activeValues: null
@@ -801,7 +913,7 @@ function resetFilters() {
     document.getElementById('resMin').value = "";
     document.getElementById('resMax').value = "";
     document.getElementById('pnSearch').value = "";
-    document.getElementById('seriesSelect').value = "";
+    document.getElementById('seriesSearch').value = '';
     updateTrack(0, 100);
     refresh();
 }

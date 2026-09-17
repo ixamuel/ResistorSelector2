@@ -176,16 +176,16 @@ function parseVal(s) {
 }
 
 function formatRes(v) {
-    if (v === 0) return "0 Ω";
+    if (v === 0) return "0";
     if (state.isDecimal) {
-        if (v < 1) return v.toFixed(3).replace(/\.?0+$/, '') + " Ω";
-        if (v < 10) return v.toFixed(2).replace(/\.?0+$/, '') + " Ω";
-        return v.toLocaleString() + " Ω";
+        if (v < 1) return v.toFixed(3).replace(/\.?0+$/, '');
+        if (v < 10) return v.toFixed(2).replace(/\.?0+$/, '');
+        return String(v);
     } else {
-        if (v >= 1000000) return (v / 1000000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + " MΩ";
-        if (v >= 1000) return (v / 1000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + " kΩ";
-        if (v < 1) return (v * 1000).toFixed(1).replace(/\.0$/, '') + " mΩ";
-        return v.toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + " Ω";
+        if (v >= 1000000) return (v / 1000000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + " M";
+        if (v >= 1000) return (v / 1000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + " k";
+        if (v < 1) return (v * 1000).toFixed(1).replace(/\.0$/, '') + " m";
+        return v.toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '');
     }
 }
 
@@ -557,8 +557,9 @@ function exportTable() {
                         ? `<a href="${escapeHtml(datasheet)}" target="_blank" rel="noopener">${escapeHtml(series)}</a>`
                         : escapeHtml(series);
                 })()}</td>
-                <td>${lookups.status[r.s]}</td>
-                <td>${lookups.packaging[r.pk]}</td>
+                <td class="status-packaging-column">${lookups.status[r.s]}</td>
+                <td class="status-packaging-column">${lookups.packaging[r.pk]}</td>
+                <td class="remarks-column" contenteditable="false"></td>
             </tr>
         `).join('');
 
@@ -572,6 +573,18 @@ function exportTable() {
                     .container { max-width: 1000px; margin: 0 auto; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
                     h2 { margin-top: 0; color: #4f46e5; }
                     .hint { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+
+                    .export-controls { display: flex; flex-wrap: wrap; gap: 18px 28px; margin: -8px 0 24px; }
+                    .control { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; }
+                    .switch { position: relative; width: 38px; height: 22px; flex: 0 0 auto; }
+                    .switch input { width: 0; height: 0; opacity: 0; }
+                    .slider { position: absolute; inset: 0; background: #cbd5e1; border-radius: 999px; transition: background 0.2s; }
+                    .slider::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: white; border-radius: 50%; box-shadow: 0 1px 3px rgba(15,23,42,0.25); transition: transform 0.2s; }
+                    .switch input:checked + .slider { background: #4f46e5; }
+                    .switch input:checked + .slider::before { transform: translateX(16px); }
+                    .remarks-column { display: none; }
+                    .remarks-column[contenteditable="true"] { min-width: 160px; outline: none; }
+                    .remarks-column[contenteditable="true"]:focus { box-shadow: inset 0 0 0 2px #c7d2fe; }
                     
                     /* Table styling for Word/Outlook friendly copy */
                     table { width: 100%; border-collapse: collapse; margin-bottom: 32px; border: 1px solid #e2e8f0; }
@@ -591,6 +604,17 @@ function exportTable() {
                 <div class="container">
                     <h2>Exported Components</h2>
                     <p class="hint">The table below is formatted for easy copy-pasting into <b>Word, Outlook, or Excel</b>. Use the buttons below to copy.</p>
+
+                    <div class="export-controls">
+                        <label class="control">
+                            <span class="switch"><input type="checkbox" id="hide-status-packaging"><span class="slider"></span></span>
+                            Hide Status and Packaging
+                        </label>
+                        <label class="control">
+                            <span class="switch"><input type="checkbox" id="add-remarks"><span class="slider"></span></span>
+                            Add Remarks
+                        </label>
+                    </div>
                     
                     <div class="actions">
                         <button class="btn btn-copy" onclick="copyTable()">Copy Table for Word/Outlook</button>
@@ -602,14 +626,15 @@ function exportTable() {
                             <thead>
                                 <tr>
                                     <th>Part Number</th>
-                                    <th>Resistance Value [Ω]</th>
+                                    <th>Resistance [Ω]</th>
                                     <th>Power [W]</th>
                                     <th>Tolerance [%]</th>
                                     <th>TCR [×10⁻⁶/K]</th>
                                     <th>Chip Size [mm]</th>
                                     <th>Datasheet</th>
-                                    <th>Status</th>
-                                    <th>Packaging</th>
+                                    <th class="status-packaging-column">Status</th>
+                                    <th class="status-packaging-column">Packaging</th>
+                                    <th class="remarks-column">Remarks</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -621,6 +646,23 @@ function exportTable() {
 
                 <script>
                     const pnData = ${JSON.stringify(selectedResistors.map(r => r.pn))};
+
+                    function toggleColumns(selector, hidden) {
+                        document.querySelectorAll(selector).forEach(cell => {
+                            cell.style.display = hidden ? 'none' : 'table-cell';
+                        });
+                    }
+
+                    document.getElementById('hide-status-packaging').onchange = event => {
+                        toggleColumns('.status-packaging-column', event.target.checked);
+                    };
+
+                    document.getElementById('add-remarks').onchange = event => {
+                        document.querySelectorAll('.remarks-column').forEach(cell => {
+                            cell.setAttribute('contenteditable', event.target.checked ? 'true' : 'false');
+                        });
+                        toggleColumns('.remarks-column', !event.target.checked);
+                    };
 
                     function copyTable() {
                         const range = document.createRange();

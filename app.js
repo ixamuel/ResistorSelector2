@@ -535,15 +535,28 @@ function exportTable() {
     const selectedResistors = resistors.filter(r => state.selectedPns.includes(r.pn));
     selectedResistors.sort((a, b) => state.selectedPns.indexOf(a.pn) - state.selectedPns.indexOf(b.pn));
 
+    const escapeHtml = value => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
     let tableRows = selectedResistors.map(r => `
             <tr>
                 <td>${r.pn}</td>
-                <td>${formatRes(r.rv)}</td>
-                <td>${lookups.power[r.pr]}W</td>
-                <td>${lookups.tolerance[r.rt]}%</td>
+                <td>${r.rv}</td>
+                <td>${lookups.power[r.pr]}</td>
+                <td>${lookups.tolerance[r.rt]}</td>
                 <td>${lookups.tcr[r.tc]}</td>
                 <td>${lookups.size[r.sz]}</td>
-                <td>${lookups.series[r.se]}</td>
+                <td>${(() => {
+                    const series = lookups.series[r.se];
+                    const datasheet = String(lookups.datasheet[r.de] || '').replace(/\s+/g, '');
+                    return datasheet && datasheet !== 'nan'
+                        ? `<a href="${escapeHtml(datasheet)}" target="_blank" rel="noopener">${escapeHtml(series)}</a>`
+                        : escapeHtml(series);
+                })()}</td>
                 <td>${lookups.status[r.s]}</td>
                 <td>${lookups.packaging[r.pk]}</td>
             </tr>
@@ -562,7 +575,7 @@ function exportTable() {
                     
                     /* Table styling for Word/Outlook friendly copy */
                     table { width: 100%; border-collapse: collapse; margin-bottom: 32px; border: 1px solid #e2e8f0; }
-                    th { background: #f1f5f9; text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; color: #475569; border: 1px solid #e2e8f0; }
+                    th { background: #f1f5f9; text-align: left; padding: 12px; font-size: 12px; color: #475569; border: 1px solid #e2e8f0; }
                     td { padding: 12px; font-size: 13px; border: 1px solid #e2e8f0; color: #334155; }
                     tr:nth-child(even) { background: #f8fafc; }
 
@@ -589,12 +602,12 @@ function exportTable() {
                             <thead>
                                 <tr>
                                     <th>Part Number</th>
-                                    <th>Resistance</th>
-                                    <th>Power</th>
-                                    <th>Tol</th>
-                                    <th>TCR</th>
-                                    <th>Size</th>
-                                    <th>Series</th>
+                                    <th>Resistance Value [Ω]</th>
+                                    <th>Power [W]</th>
+                                    <th>Tolerance [%]</th>
+                                    <th>TCR [×10⁻⁶/K]</th>
+                                    <th>Chip Size [mm]</th>
+                                    <th>Datasheet</th>
                                     <th>Status</th>
                                     <th>Packaging</th>
                                 </tr>

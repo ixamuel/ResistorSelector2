@@ -815,8 +815,8 @@ function exportTable() {
                     .stock-cell-num { text-align: right; font-variant-numeric: tabular-nums; }
                     .stock-total-col, .stock-total { font-weight: 800; }
                     .stock-dash { color: #cbd5e1; }
-                    .stock-cell-num a { color: inherit; text-decoration: none; }
-                    .stock-cell-num a:hover { text-decoration: underline; }
+                    .stock-cell-num a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; font-weight: 700; }
+                    .stock-cell-num a:hover { color: #1d4ed8; }
                     .stock-table.stock-matrix thead th.stock-col-farnell { background: rgba(16, 150, 80, 0.1); color: #0a7a3f; }
                     .stock-empty, .stock-loading, .stock-error, .stock-note { padding: 10px 2px; font-size: 12px; font-weight: 700; }
                     .stock-loading { color: #64748b; }

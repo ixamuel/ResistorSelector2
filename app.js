@@ -607,17 +607,107 @@ function updateSelectionUI() {
 
     if (state.selectedPns.length > 0) {
         pill.innerHTML = state.selectedPns.map(pn => `
-                <div class="part-pill">
-                    <span>${pn}</span>
+                <div class="part-pill" draggable="true" data-pn="${pn}" title="Drag to reorder">
+                    <span class="drag-handle" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="9" cy="6" r="1.7"></circle>
+                            <circle cx="15" cy="6" r="1.7"></circle>
+                            <circle cx="9" cy="12" r="1.7"></circle>
+                            <circle cx="15" cy="12" r="1.7"></circle>
+                            <circle cx="9" cy="18" r="1.7"></circle>
+                            <circle cx="15" cy="18" r="1.7"></circle>
+                        </svg>
+                    </span>
+                    <span class="part-pill-label">${pn}</span>
                     <div class="btn-remove" onclick="toggleSelect('${pn}')">✕</div>
                 </div>
             `).join('');
         pill.classList.add('active');
         actions.classList.add('active');
+        enableSelectionReorder(pill);
     } else {
         pill.classList.remove('active');
         actions.classList.remove('active');
     }
+}
+
+// Enables drag-and-drop reordering of the selected part pills.
+// The visual order is written back to state.selectedPns on drop so that
+// ordering-sensitive actions (export, copy list, external searches) follow it.
+function enableSelectionReorder(container) {
+    let dragged = null;
+
+    const nextElement = node => {
+        let n = node.nextSibling;
+        while (n && n.nodeType !== 1) n = n.nextSibling;
+        return n;
+    };
+    const prevElement = node => {
+        let n = node.previousSibling;
+        while (n && n.nodeType !== 1) n = n.previousSibling;
+        return n;
+    };
+    const persistOrder = () => {
+        state.selectedPns = Array.from(container.querySelectorAll('.part-pill'))
+            .map(el => el.dataset.pn);
+    };
+    const clearTargets = () => {
+        container.querySelectorAll('.part-pill.drag-target')
+            .forEach(el => el.classList.remove('drag-target'));
+    };
+
+    container.querySelectorAll('.part-pill').forEach(el => {
+        el.addEventListener('dragstart', e => {
+            // Don't start a drag when the user is clicking the remove button
+            if (e.target.closest('.btn-remove')) {
+                e.preventDefault();
+                return;
+            }
+            dragged = el;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', el.dataset.pn);
+            requestAnimationFrame(() => el.classList.add('dragging'));
+        });
+
+        el.addEventListener('dragend', () => {
+            el.classList.remove('dragging');
+            clearTargets();
+            dragged = null;
+            persistOrder();
+        });
+
+        el.addEventListener('dragover', e => {
+            if (!dragged || dragged === el) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            const rect = el.getBoundingClientRect();
+            let insertAfter;
+            if (e.clientY > rect.bottom) insertAfter = true;
+            else if (e.clientY < rect.top) insertAfter = false;
+            else insertAfter = e.clientX > rect.left + rect.width / 2;
+
+            clearTargets();
+            el.classList.add('drag-target');
+
+            if (insertAfter) {
+                if (nextElement(el) !== dragged) el.after(dragged);
+            } else if (prevElement(el) !== dragged) {
+                el.before(dragged);
+            }
+        });
+    });
+
+    // Allow dropping on the container's empty space (moves the pill to the end)
+    container.addEventListener('dragover', e => {
+        if (dragged && e.target === container) e.preventDefault();
+    });
+    container.addEventListener('drop', e => {
+        if (!dragged) return;
+        e.preventDefault();
+        clearTargets();
+        persistOrder();
+    });
 }
 
 function clearSelection() {

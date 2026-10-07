@@ -604,6 +604,7 @@ function toggleSelect(pn) {
 function updateSelectionUI() {
     const pill = document.getElementById('selection-pill');
     const actions = document.getElementById('action-pill');
+    const stockBtn = document.getElementById('stockCheckButton');
 
     if (state.selectedPns.length > 0) {
         pill.innerHTML = state.selectedPns.map(pn => `
@@ -629,6 +630,8 @@ function updateSelectionUI() {
         pill.classList.remove('active');
         actions.classList.remove('active');
     }
+
+    if (stockBtn) stockBtn.disabled = state.selectedPns.length === 0;
 }
 
 // Enables drag-and-drop reordering of the selected part pills.
@@ -788,11 +791,37 @@ function exportTable() {
                     .remarks-column[contenteditable="true"] { min-width: 160px; outline: none; }
                     .remarks-column[contenteditable="true"]:focus { box-shadow: inset 0 0 0 2px #c7d2fe; }
                     
-                    /* Table styling for Word/Outlook friendly copy */
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 32px; border: 1px solid #e2e8f0; }
-                    th { background: #f1f5f9; text-align: left; padding: 12px; font-size: 12px; color: #475569; border: 1px solid #e2e8f0; }
-                    td { padding: 12px; font-size: 13px; border: 1px solid #e2e8f0; color: #334155; }
-                    tr:nth-child(even) { background: #f8fafc; }
+                    /* Table styling for Word/Outlook friendly copy (scoped so it
+                       does not leak onto the stock matrix below) */
+                    #res-table { width: 100%; border-collapse: collapse; margin-bottom: 32px; border: 1px solid #e2e8f0; }
+                    #res-table th { background: #f1f5f9; text-align: left; padding: 12px; font-size: 12px; color: #475569; border: 1px solid #e2e8f0; }
+                    #res-table td { padding: 12px; font-size: 13px; border: 1px solid #e2e8f0; color: #334155; }
+                    #res-table tr:nth-child(even) { background: #f8fafc; }
+
+                    /* Distributor stock */
+                    .stock-toolbar { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; flex-wrap: wrap; }
+                    .stock-toolbar select { padding: 8px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 13px; }
+                    .btn-stock { background: #0e7490; color: white; }
+                    .btn-stock:hover { background: #155e75; }
+                    .stock-panel { display: none; margin: 0 0 28px; }
+                    .stock-panel.active { display: block; }
+                    .stock-meta { display: inline-block; margin-bottom: 10px; font-size: 12px; font-weight: 700; color: #64748b; }
+                    .stock-matrix-scroll { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; }
+                    .stock-table.stock-matrix { border-collapse: collapse; width: 100%; font-size: 12px; }
+                    .stock-table.stock-matrix th, .stock-table.stock-matrix td { padding: 8px 12px; border: 1px solid #e2e8f0; white-space: nowrap; }
+                    .stock-table.stock-matrix thead th { position: sticky; top: 0; background: #f1f5f9; color: #475569; text-align: left; font-size: 11px; }
+                    .stock-table.stock-matrix tbody tr:nth-child(even) { background: #f8fafc; }
+                    .stock-pn-col { font-weight: 800; color: #4f46e5; }
+                    .stock-cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+                    .stock-total-col, .stock-total { font-weight: 800; }
+                    .stock-dash { color: #cbd5e1; }
+                    .stock-cell-num a { color: inherit; text-decoration: none; }
+                    .stock-cell-num a:hover { text-decoration: underline; }
+                    .stock-table.stock-matrix thead th.stock-col-farnell { background: rgba(16, 150, 80, 0.1); color: #0a7a3f; }
+                    .stock-empty, .stock-loading, .stock-error, .stock-note { padding: 10px 2px; font-size: 12px; font-weight: 700; }
+                    .stock-loading { color: #64748b; }
+                    .stock-note { color: #b45309; }
+                    .stock-error { color: #b91c1c; }
 
                     .actions { display: flex; gap: 12px; margin-bottom: 24px; }
                     .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; }
@@ -823,6 +852,18 @@ function exportTable() {
                         <button class="btn btn-pn" onclick="copyPNList()">Copy Part no. list</button>
                     </div>
 
+                    <div class="stock-toolbar">
+                        <label class="control" for="exportStockRegion">Distributor stock region
+                            <select id="exportStockRegion">
+                                <option value="Europe" selected>Europe</option>
+                                <option value="North America">North America</option>
+                                <option value="Asia">Asia</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-stock" id="exportStockBtn" onclick="checkExportStock()">Check Stock</button>
+                    </div>
+                    <div id="export-stock-panel" class="stock-panel"></div>
+
                     <div id="table-wrapper">
                         <table id="res-table">
                             <thead>
@@ -848,6 +889,51 @@ function exportTable() {
 
                 <script>
                     const pnData = ${JSON.stringify(selectedResistors.map(r => r.pn))};
+
+                    // --- Stock check (shared renderer injected from app.js) ---
+                    const STOCK_API_URL = ${JSON.stringify(new URL("api/stock", window.location.href).href)};
+                    const MAX_STOCK_PARTS = ${MAX_STOCK_PARTS};
+                    const escapeHtml = ${escapeHtml.toString()};
+                    const stockRegionLabel = ${stockRegionLabel.toString()};
+                    const stockFormatDate = ${stockFormatDate.toString()};
+                    const buildStockMetaHtml = ${buildStockMetaHtml.toString()};
+                    const buildStockTableHtml = ${buildStockTableHtml.toString()};
+
+                    function checkExportStock() {
+                        const regionEl = document.getElementById('exportStockRegion');
+                        const region = regionEl ? regionEl.value : 'Europe';
+                        const panel = document.getElementById('export-stock-panel');
+                        const pns = pnData.slice(0, MAX_STOCK_PARTS);
+
+                        panel.className = 'stock-panel active';
+                        panel.innerHTML = '<div class="stock-loading">Checking distributor stock…</div>';
+
+                        const note = pnData.length > MAX_STOCK_PARTS
+                            ? '<div class="stock-note">Showing first ' + MAX_STOCK_PARTS + ' of ' + pnData.length + ' parts.</div>'
+                            : '';
+
+                        const params = new URLSearchParams();
+                        params.set('location', region);
+                        params.set('type', '1');
+                        pns.forEach(pn => params.append('pn', pn));
+
+                        fetch(STOCK_API_URL + '?' + params.toString())
+                            .then(response => {
+                                if (!response.ok) {
+                                    return response.json().catch(() => null).then(body => {
+                                        const detail = body && body.error ? body.error : 'HTTP ' + response.status;
+                                        throw new Error(detail + (body && body.code ? ' [' + body.code + ']' : ''));
+                                    });
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                panel.innerHTML = note + buildStockMetaHtml(data) + buildStockTableHtml(data, pns);
+                            })
+                            .catch(error => {
+                                panel.innerHTML = '<div class="stock-error">' + escapeHtml(error.message) + '</div>';
+                            });
+                    }
 
                     function toggleColumns(selector, hidden) {
                         document.querySelectorAll(selector).forEach(cell => {
@@ -983,6 +1069,185 @@ function openDatasheet() {
         }
     });
     uniqueLinks.forEach(link => window.open(link, '_blank'));
+}
+
+/* ================= Stock Check ================= */
+
+const MAX_STOCK_PARTS = 25;
+
+function stockApiUrl() {
+    return new URL("api/stock", window.location.href).href;
+}
+
+// --- Shared renderer (string concatenation only, so it can be injected into
+// the export window via fn.toString()). ---
+
+function escapeHtml(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[character]));
+}
+
+function stockRegionLabel(location) {
+    if (location === "North America") return "NA";
+    if (location === "Asia") return "Asia";
+    return "EU";
+}
+
+function stockFormatDate(iso) {
+    const date = iso ? new Date(iso) : new Date();
+    if (isNaN(date.getTime())) return "";
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    return day + "." + month + "." + date.getFullYear();
+}
+
+function buildStockMetaHtml(payload) {
+    const location = (payload && payload.location) || "Europe";
+    return (
+        '<span class="stock-meta">' +
+        escapeHtml(stockRegionLabel(location)) +
+        " stock checked: " +
+        escapeHtml(stockFormatDate(payload && payload.checkedAt)) +
+        "</span>"
+    );
+}
+
+function buildStockTableHtml(payload, order) {
+    const results = (payload && payload.results) || {};
+    const distributors = (payload && payload.distributors) || [];
+    const location = (payload && payload.location) || "Europe";
+    const label = stockRegionLabel(location);
+    const parts = order || [];
+
+    if (parts.length === 0) {
+        return '<div class="stock-empty">No part numbers to check.</div>';
+    }
+
+    let html =
+        '<div class="stock-matrix-scroll"><table class="stock-table stock-matrix"><thead><tr>' +
+        '<th class="stock-pn-col">Panasonic PN</th>';
+    distributors.forEach((name) => {
+        const columnClass = "stock-col-" + String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        html += '<th class="' + columnClass + '">' + escapeHtml(name) + "</th>";
+    });
+    html += '<th class="stock-total-col">Total ' + escapeHtml(label) + " Stock</th></tr></thead><tbody>";
+
+    parts.forEach((pn) => {
+        const result = results[pn] || {};
+        const byDistributor = {};
+        (result.rows || []).forEach((row) => {
+            byDistributor[row.distributor] = row;
+        });
+
+        html += '<tr><td class="stock-pn-col">' + escapeHtml(pn) + "</td>";
+        distributors.forEach((name) => {
+            const cell = byDistributor[name];
+            if (cell && cell.quantity > 0) {
+                const text = escapeHtml(cell.stock || String(cell.quantity));
+                html +=
+                    '<td class="stock-cell-num">' +
+                    (cell.buyUrl
+                        ? '<a href="' + escapeHtml(cell.buyUrl) + '" target="_blank" rel="noopener noreferrer">' + text + "</a>"
+                        : text) +
+                    "</td>";
+            } else {
+                html += '<td class="stock-cell-num stock-dash">&mdash;</td>';
+            }
+        });
+        const total = typeof result.total === "number" ? result.total : 0;
+        html +=
+            '<td class="stock-cell-num stock-total">' +
+            (total > 0 ? total.toLocaleString("en-US") : "&mdash;") +
+            "</td></tr>";
+    });
+
+    html += "</tbody></table></div>";
+
+    const failed = parts.filter((pn) => results[pn] && results[pn].error);
+    if (failed.length > 0) {
+        html +=
+            '<div class="stock-error">Could not check: ' +
+            failed.map((pn) => escapeHtml(pn)).join(", ") +
+            "</div>";
+    } else if (distributors.length === 0) {
+        html += '<div class="stock-empty">No distributor stock found.</div>';
+    }
+
+    return html;
+}
+
+// --- Modal controller ---
+
+function stockTruncationNote() {
+    if (state.selectedPns.length <= MAX_STOCK_PARTS) return "";
+    return '<div class="stock-note">Showing first ' + MAX_STOCK_PARTS + ' of ' +
+        state.selectedPns.length + ' selected parts.</div>';
+}
+
+function openStockModal() {
+    if (state.selectedPns.length === 0) return;
+    const modal = document.getElementById('stockModal');
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.classList.add('stock-modal-open');
+    document.addEventListener('keydown', stockEscapeHandler);
+    refreshStock();
+}
+
+function closeStockModal() {
+    const modal = document.getElementById('stockModal');
+    if (modal) modal.hidden = true;
+    document.body.classList.remove('stock-modal-open');
+    document.removeEventListener('keydown', stockEscapeHandler);
+}
+
+function stockEscapeHandler(event) {
+    if (event.key === 'Escape') closeStockModal();
+}
+
+function refreshStock() {
+    const regionEl = document.getElementById('stockRegion');
+    const location = regionEl ? regionEl.value : 'Europe';
+    state.stockLocation = location;
+
+    const body = document.getElementById('stockModalBody');
+    if (!body) return;
+
+    body.innerHTML = '<div class="stock-loading">Checking distributor stock…</div>';
+    fetchStock(state.selectedPns.slice(0, MAX_STOCK_PARTS), location, body);
+}
+
+function fetchStock(pns, location, container) {
+    if (pns.length === 0) {
+        container.innerHTML = '<div class="stock-empty">No part numbers to check.</div>';
+        return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('location', location);
+    params.set('type', '1');
+    pns.forEach(pn => params.append('pn', pn));
+
+    fetch(stockApiUrl() + '?' + params.toString())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().catch(() => null).then(body => {
+                    const detail = body && body.error ? body.error : 'HTTP ' + response.status;
+                    throw new Error(detail + (body && body.code ? ' [' + body.code + ']' : ''));
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            container.innerHTML =
+                stockTruncationNote() +
+                buildStockMetaHtml(data) +
+                buildStockTableHtml(data, pns);
+        })
+        .catch(error => {
+            container.innerHTML = '<div class="stock-error">' + escapeHtml(error.message) + '</div>';
+        });
 }
 
 function resetFilters() {

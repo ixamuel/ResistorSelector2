@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ResistorSelector v2.1</title>
-    <link rel="stylesheet" href="styles.css?v=20260917-series-ui2">
+    <link rel="stylesheet" href="styles.css?v=20261007-stock">
 </head>
 
 <body>
@@ -183,12 +183,34 @@
                 <button class="pill-btn btn-octopart" onclick="openOctopart()">Octopart</button>
                 <button class="pill-btn btn-mouser" onclick="openMouser()">Mouser</button>
                 <button class="pill-btn btn-farnell" onclick="openFarnell()">Farnell</button>
+                <button class="pill-btn btn-stock" id="stockCheckButton" onclick="openStockModal()" disabled>Stock
+                    Check</button>
             </div>
         </div>
     </main>
 
+    <div id="stockModal" class="stock-modal" hidden>
+        <div class="stock-modal-backdrop" onclick="closeStockModal()"></div>
+        <div class="stock-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="stockModalTitle">
+            <div class="stock-modal-head">
+                <h3 id="stockModalTitle">Distributor stock</h3>
+                <div class="stock-modal-tools">
+                    <label for="stockRegion">Region</label>
+                    <select id="stockRegion" onchange="refreshStock()">
+                        <option value="Europe" selected>Europe</option>
+                        <option value="North America">North America</option>
+                        <option value="Asia">Asia</option>
+                    </select>
+                    <button type="button" class="stock-btn" onclick="refreshStock()">Refresh</button>
+                    <button type="button" class="stock-close" onclick="closeStockModal()" aria-label="Close">✕</button>
+                </div>
+            </div>
+            <div class="stock-modal-body" id="stockModalBody"></div>
+        </div>
+    </div>
+
     <script src="data.js"></script>
-    <script src="app.js?v=20260917-series-ui2"></script>
+    <script src="app.js?v=20261007-stock"></script>
     <script>
         // Load the gzip-compressed data, then initialize the app
         loadResistorData()
